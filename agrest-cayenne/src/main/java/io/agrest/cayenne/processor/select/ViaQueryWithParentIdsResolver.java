@@ -39,7 +39,7 @@ public class ViaQueryWithParentIdsResolver<T extends DataObject> extends ViaQuer
         }
 
         // assemble query here, where we have access to all parent ids
-        ColumnSelect<Object[]> select = queryAssembler.createQueryWithParentIdsQualifier(entity, parentData);
+        ColumnSelect<Object[]> select = queryAssembler.createQueryWithParentIdsQualifier(entity, parentData, context);
         if (select == null) {
             // no parents - nothing to fetch for this entity, and no need to descend into children
             return Collections.emptyList();

@@ -144,4 +144,12 @@ public class MainModelTester extends AgCayenneTester {
     public Table e33() {
         return db.getTable("e33");
     }
+
+    public Table e34() {
+        return db.getTable("e34");
+    }
+
+    public Table e35() {
+        return db.getTable("e35");
+    }
 }

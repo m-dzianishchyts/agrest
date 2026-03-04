@@ -75,6 +75,7 @@ import io.agrest.runtime.processor.select.stage.SelectCreateResourceEntityStage;
 import io.agrest.runtime.processor.select.stage.SelectEncoderInstallStage;
 import io.agrest.runtime.processor.select.stage.SelectFetchDataStage;
 import io.agrest.runtime.processor.select.stage.SelectFilterResultStage;
+import io.agrest.runtime.processor.select.stage.SelectProcessOverlaysStage;
 import io.agrest.runtime.processor.select.stage.SelectStartStage;
 import io.agrest.runtime.processor.unrelate.UnrelateProcessorFactory;
 import io.agrest.runtime.processor.unrelate.provider.UnrelateProcessorFactoryProvider;
@@ -174,6 +175,7 @@ public class AgCoreModule implements Module {
         binder.bind(SelectProcessorFactory.class).toProvider(SelectProcessorFactoryProvider.class);
         binder.bind(SelectStartStage.class).to(SelectStartStage.class);
         binder.bind(SelectCreateResourceEntityStage.class).to(SelectCreateResourceEntityStage.class);
+        binder.bind(SelectProcessOverlaysStage.class).to(SelectProcessOverlaysStage.class);
         binder.bind(SelectApplyServerParamsStage.class).to(SelectApplyServerParamsStage.class);
         binder.bind(SelectEncoderInstallStage.class).to(SelectEncoderInstallStage.class);
         binder.bind(SelectAssembleQueryStage.class).to(SelectAssembleQueryStage.class);

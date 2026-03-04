@@ -43,7 +43,7 @@ public class ViaQueryWithParentExpResolver<T extends DataObject> extends BaseRel
     @Override
     protected void doOnParentQueryAssembled(RelatedResourceEntity<T> entity, SelectContext<?> context) {
         CayenneProcessor.getRelatedEntity(entity)
-                .setSelect(queryAssembler.createQueryWithParentQualifier(entity));
+                .setSelect(queryAssembler.createQueryWithParentQualifier(entity, context));
     }
 
     @Override

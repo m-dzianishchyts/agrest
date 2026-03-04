@@ -17,11 +17,12 @@ public interface ICayenneQueryAssembler {
 
     <T> ObjectSelect<T> createRootQuery(SelectContext<T> context);
 
-    <T> ColumnSelect<Object[]> createQueryWithParentQualifier(RelatedResourceEntity<T> entity);
+    <T> ColumnSelect<Object[]> createQueryWithParentQualifier(RelatedResourceEntity<T> entity, SelectContext<?> context);
 
     <T, P> ColumnSelect<Object[]> createQueryWithParentIdsQualifier(
             RelatedResourceEntity<T> entity,
-            Iterable<P> parentData);
+            Iterable<P> parentData,
+            SelectContext<?> context);
 
     <T> Property<?>[] queryColumns(RelatedResourceEntity<T> entity);
 

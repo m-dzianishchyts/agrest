@@ -40,6 +40,10 @@ public class RequestSchema {
         base.merge(overlay);
     }
 
+    public <A> AgEntityOverlay<A> getOverlay(Class<A> type) {
+        return (AgEntityOverlay<A>) immutableOverlays().get(type);
+    }
+
     private <A> AgEntity<A> createEntity(Class<A> type) {
         return schema.getEntity(type).resolveOverlayHierarchy(schema, immutableOverlays());
     }

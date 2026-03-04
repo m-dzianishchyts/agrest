@@ -46,7 +46,12 @@ class EntityPathCache {
     }
 
     PathDescriptor getOrCreate(String agPath, Map<String, String> aliases) {
-        return pathCache.computeIfAbsent(agPath, p -> create(agPath, agPath, entity, aliases));
+        // Don't cache paths with aliases to avoid cache collisions
+        // when different overlays use the same path but with different alias mappings
+        if (aliases.isEmpty()) {
+            return pathCache.computeIfAbsent(agPath, p -> create(agPath, agPath, entity, aliases));
+        }
+        return create(agPath, agPath, entity, aliases);
     }
 
     private PathDescriptor create(

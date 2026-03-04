@@ -14,6 +14,13 @@ public enum SelectStage {
 
     CREATE_ENTITY,
 
+    /**
+     * A stage when conditional relationship overlays are processed.
+     *
+     * @since 5.0
+     */
+    PROCESS_OVERLAYS,
+
     APPLY_SERVER_PARAMS,
 
     ASSEMBLE_QUERY,

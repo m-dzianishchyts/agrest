@@ -12,9 +12,11 @@ import io.agrest.cayenne.persister.ICayennePersister;
 import io.agrest.id.AgObjectId;
 import io.agrest.meta.AgEntity;
 import io.agrest.meta.AgIdPart;
+import io.agrest.meta.ConditionalRelationshipOverlay;
 import io.agrest.protocol.Direction;
 import io.agrest.protocol.Sort;
 import io.agrest.runtime.EntityParent;
+import io.agrest.runtime.meta.RequestSchema;
 import io.agrest.runtime.processor.select.SelectContext;
 import org.apache.cayenne.di.Inject;
 import org.apache.cayenne.exp.Expression;
@@ -36,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -66,7 +69,7 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
 
         ObjectSelect<T> query = context.getId() != null
                 ? createRootIdQuery(context.getEntity(), context.getId())
-                : createBaseQuery(context.getEntity());
+                : createBaseQuery(context.getEntity(), context.getSchema());
 
         EntityParent<?> parent = context.getParent();
         if (parent != null) {
@@ -77,13 +80,13 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
     }
 
     @Override
-    public <T> ColumnSelect<Object[]> createQueryWithParentQualifier(RelatedResourceEntity<T> entity) {
+    public <T> ColumnSelect<Object[]> createQueryWithParentQualifier(RelatedResourceEntity<T> entity, SelectContext<?> context) {
 
-        ColumnSelect<Object[]> query = createBaseQuery(entity).columns(queryColumns(entity));
+        ColumnSelect<Object[]> query = createBaseQuery(entity, context.getSchema()).columns(queryColumns(entity, context.getSchema()));
 
         // Translate expression from parent.
         // Find the closest parent in the chain that has a query of its own, and use that as a base.
-        Expression parentQualifier = resolveParentQualifier(entity, null);
+        Expression parentQualifier = resolveParentQualifier(entity, null, context.getSchema());
         if (parentQualifier != null) {
             query.and(parentQualifier);
         }
@@ -95,13 +98,19 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
      * @since 5.0
      */
     public <T> Property<?>[] queryColumns(RelatedResourceEntity<T> entity) {
+        return queryColumns(entity, null);
+    }
+
+    protected <T> Property<?>[] queryColumns(RelatedResourceEntity<T> entity, RequestSchema schema) {
 
         // Use Cayenne metadata for query building. Agrest metadata may be missing some important parts like ids
         // (e.g. see https://github.com/agrestio/agrest/issues/473)
 
         AgEntity<?> parentEntity = entity.getParent().getAgEntity();
         ObjEntity parentObjEntity = entityResolver.getObjEntity(entity.getParent().getName());
-        ObjRelationship objRelationship = findRelationship(parentObjEntity, entity.getIncoming().getName());
+
+        String relationshipName = schema != null ? resolveIncomingRelationshipName(entity, schema) : entity.getIncoming().getName();
+        ObjRelationship objRelationship = findRelationship(parentObjEntity, relationshipName);
         ASTDbPath reversePath = new ASTDbPath(objRelationship.getReverseDbRelationshipPath());
 
         Property<?>[] columns = new Property<?>[parentEntity.getIdParts().size() + 1];
@@ -199,7 +208,7 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
     // using dbpaths for all expression operations on the theory that some object paths can be unidirectional, and
     // hence may be missing for some relationships (although all "incoming" relationships along the parents chain
     // should be present, no?)
-    protected Expression resolveParentQualifier(RelatedResourceEntity<?> entity, String outgoingDbPath) {
+    protected Expression resolveParentQualifier(RelatedResourceEntity<?> entity, String outgoingDbPath, RequestSchema schema) {
 
         ResourceEntity<?> parent = entity.getParent();
         CayenneResourceEntityExt parentExt = CayenneProcessor.getEntity(parent);
@@ -218,7 +227,7 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
                 return null;
             }
 
-            String incomingPath = dbPath(parent.getType(), entity.getIncoming().getName());
+            String incomingPath = dbPath(parent.getType(), resolveIncomingRelationshipName(entity, schema));
             String fullDbPath = concatWithParentDbPath(incomingPath, outgoingDbPath);
 
             ObjEntity parentObjEntity = entityResolver.getObjEntity(parent.getType());
@@ -226,7 +235,7 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
             return parentObjEntity.getDbEntity().translateToRelatedEntity(dbParentQualifier, fullDbPath);
         }
 
-        String incomingPath = dbPath(parent.getType(), entity.getIncoming().getName());
+        String incomingPath = dbPath(parent.getType(), resolveIncomingRelationshipName(entity, schema));
         String fullDbPath = concatWithParentDbPath(incomingPath, outgoingDbPath);
 
         // shouldn't really happen with any of the current built-in root strategies, but who knows what customizations
@@ -239,7 +248,7 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
                             fullDbPath);
         }
 
-        return resolveParentQualifier((RelatedResourceEntity) parent, fullDbPath);
+        return resolveParentQualifier((RelatedResourceEntity) parent, fullDbPath, schema);
     }
 
     private String dbPath(Class<?> entityType, String relationshipName) {
@@ -275,9 +284,9 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
     }
 
     @Override
-    public <T, P> ColumnSelect<Object[]> createQueryWithParentIdsQualifier(RelatedResourceEntity<T> entity, Iterable<P> parentData) {
+    public <T, P> ColumnSelect<Object[]> createQueryWithParentIdsQualifier(RelatedResourceEntity<T> entity, Iterable<P> parentData, SelectContext<?> context) {
 
-        ColumnSelect<Object[]> query = createBaseQuery(entity).columns(queryColumns(entity));
+        ColumnSelect<Object[]> query = createBaseQuery(entity, context.getSchema()).columns(queryColumns(entity, context.getSchema()));
 
         // build id-based qualifier
         List<Expression> qualifiers = new ArrayList<>();
@@ -286,7 +295,8 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
         // very efficient in case of pagination
 
         ObjEntity parentObjEntity = entityResolver.getObjEntity(entity.getParent().getName());
-        ObjRelationship objRelationship = parentObjEntity.getRelationship(entity.getIncoming().getName());
+        String relationshipName = resolveIncomingRelationshipName(entity, context.getSchema());
+        ObjRelationship objRelationship = parentObjEntity.getRelationship(relationshipName);
         String reversePath = objRelationship.getReverseDbRelationshipPath();
 
         consumeRange(parentData, entity.getParent().getStart(), entity.getParent().getLimit(),
@@ -346,7 +356,7 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
                 .where(buildIdQualifier(entity.getAgEntity(), rootId));
     }
 
-    protected <T> ObjectSelect<T> createBaseQuery(ResourceEntity<T> entity) {
+    protected <T> ObjectSelect<T> createBaseQuery(ResourceEntity<T> entity, RequestSchema schema) {
 
         ObjectSelect<T> query = ObjectSelect.query(entity.getType());
 
@@ -392,9 +402,10 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
     }
 
     protected Ordering toOrdering(ResourceEntity<?> entity, Sort sort) {
-        return new Ordering(
-                pathResolver.resolve(entity.getAgEntity().getName(), sort.getPath()).getPathExp(),
-                toSortOrder(sort.getDirection()));
+        Map<String, String> aliases = entity.getSortPathAliases(sort.getPath());
+        ASTPath path = pathResolver.resolve(entity.getAgEntity().getName(), sort.getPath(), aliases).getPathExp();
+        
+        return new Ordering(path, toSortOrder(sort.getDirection()));
     }
 
     private SortOrder toSortOrder(Direction direction) {
@@ -404,5 +415,19 @@ public class CayenneQueryAssembler implements ICayenneQueryAssembler {
             case desc_ci -> SortOrder.DESCENDING_INSENSITIVE;
             case desc -> SortOrder.DESCENDING;
         };
+    }
+
+    private String resolveIncomingRelationshipName(RelatedResourceEntity<?> entity, RequestSchema schema) {
+        if (schema == null) {
+            return entity.getIncoming().getName();
+        }
+
+        ConditionalRelationshipOverlay conditional = ConditionalRelationshipOverlay
+                .resolveOverlay(schema, entity.getParent().getAgEntity(), entity.getIncoming().getName());
+        if (conditional != null) {
+            return conditional.getUnderlyingRelationshipName();
+        }
+
+        return entity.getIncoming().getName();
     }
 }

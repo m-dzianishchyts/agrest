@@ -28,6 +28,7 @@ public abstract class ResourceEntity<T> {
 
     private ResourceEntity<?> mapBy;
     private final List<Sort> orderings;
+    private final Map<String, Map<String, String>> sortPathAliases;
     private Exp exp;
     private int start;
     private int limit;
@@ -40,6 +41,7 @@ public abstract class ResourceEntity<T> {
         this.idIncluded = false;
         this.children = new HashMap<>();
         this.orderings = new ArrayList<>(2);
+        this.sortPathAliases = new HashMap<>();
         this.properties = new HashMap<>(5);
     }
 
@@ -146,6 +148,29 @@ public abstract class ResourceEntity<T> {
 
     public List<Sort> getOrderings() {
         return orderings;
+    }
+
+    /**
+     * Returns path aliases for a given sort path.
+     * <br>
+     * Unlike {@link io.agrest.protocol.Exp}, {@link io.agrest.protocol.Sort} paths are immutable strings,
+     * so we store their resolved aliases separately in this map to be used during query assembly.
+     *
+     * @since 5.0
+     */
+    public Map<String, String> getSortPathAliases(String path) {
+        return sortPathAliases.getOrDefault(path, Collections.emptyMap());
+    }
+
+    /**
+     * Sets path aliases for a given sort path.
+     *
+     * @since 5.0
+     */
+    public void setSortPathAliases(String path, Map<String, String> aliases) {
+        if (aliases != null && !aliases.isEmpty()) {
+            sortPathAliases.put(path, aliases);
+        }
     }
 
     /**

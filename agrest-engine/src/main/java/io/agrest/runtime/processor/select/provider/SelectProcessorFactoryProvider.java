@@ -5,12 +5,13 @@ import io.agrest.processor.Processor;
 import io.agrest.runtime.AgExceptionMappers;
 import io.agrest.runtime.processor.select.SelectContext;
 import io.agrest.runtime.processor.select.SelectProcessorFactory;
+import io.agrest.runtime.processor.select.stage.SelectApplyServerParamsStage;
 import io.agrest.runtime.processor.select.stage.SelectAssembleQueryStage;
 import io.agrest.runtime.processor.select.stage.SelectCreateResourceEntityStage;
 import io.agrest.runtime.processor.select.stage.SelectEncoderInstallStage;
 import io.agrest.runtime.processor.select.stage.SelectFetchDataStage;
 import io.agrest.runtime.processor.select.stage.SelectFilterResultStage;
-import io.agrest.runtime.processor.select.stage.SelectApplyServerParamsStage;
+import io.agrest.runtime.processor.select.stage.SelectProcessOverlaysStage;
 import io.agrest.runtime.processor.select.stage.SelectStartStage;
 import org.apache.cayenne.di.DIRuntimeException;
 import org.apache.cayenne.di.Inject;
@@ -29,6 +30,7 @@ public class SelectProcessorFactoryProvider implements Provider<SelectProcessorF
     public SelectProcessorFactoryProvider(
             @Inject SelectStartStage startStage,
             @Inject SelectCreateResourceEntityStage createResourceEntityStage,
+            @Inject SelectProcessOverlaysStage processOverlaysStage,
             @Inject SelectApplyServerParamsStage applyServerParamsStage,
             @Inject SelectAssembleQueryStage assembleQueryStage,
             @Inject SelectFetchDataStage fetchDataStage,
@@ -41,6 +43,7 @@ public class SelectProcessorFactoryProvider implements Provider<SelectProcessorF
         stages = new EnumMap<>(SelectStage.class);
         stages.put(SelectStage.START, startStage);
         stages.put(SelectStage.CREATE_ENTITY, createResourceEntityStage);
+        stages.put(SelectStage.PROCESS_OVERLAYS, processOverlaysStage);
         stages.put(SelectStage.APPLY_SERVER_PARAMS, applyServerParamsStage);
         stages.put(SelectStage.ASSEMBLE_QUERY, assembleQueryStage);
         stages.put(SelectStage.FETCH_DATA, fetchDataStage);

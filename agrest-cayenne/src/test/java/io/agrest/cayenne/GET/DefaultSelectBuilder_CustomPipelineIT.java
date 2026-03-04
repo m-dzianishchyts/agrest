@@ -46,6 +46,7 @@ public class DefaultSelectBuilder_CustomPipelineIT extends MainDbTest {
                 .stage(SelectStage.FILTER_RESULT, c -> stageRecorder.accept(SelectStage.FILTER_RESULT))
                 .stage(SelectStage.ENCODE, c -> stageRecorder.accept(SelectStage.ENCODE))
                 .stage(SelectStage.ASSEMBLE_QUERY, c -> stageRecorder.accept(SelectStage.ASSEMBLE_QUERY))
+                .stage(SelectStage.PROCESS_OVERLAYS, c -> stageRecorder.accept(SelectStage.PROCESS_OVERLAYS))
                 .stage(SelectStage.APPLY_SERVER_PARAMS, c -> stageRecorder.accept(SelectStage.APPLY_SERVER_PARAMS))
                 .get();
 

@@ -6,6 +6,7 @@ import io.agrest.access.PropertyFilter;
 import io.agrest.access.PropertyFilteringRulesBuilder;
 import io.agrest.access.ReadFilter;
 import io.agrest.access.UpdateAuthorizer;
+import io.agrest.protocol.Exp;
 import io.agrest.reader.DataReader;
 import io.agrest.resolver.BaseRootDataResolver;
 import io.agrest.resolver.ReaderBasedResolver;
@@ -434,6 +435,11 @@ public class AgEntityOverlay<T> {
         return this;
     }
 
+    public AgEntityOverlay<T> relationshipOverlay(AgRelationshipOverlay overlay) {
+        relationships.put(overlay.getName(), overlay);
+        return this;
+    }
+
     /**
      * Adds or replaces a relationship overlay in the overlaid entity. This allows Agrest entities to declare properties not
      * present in the underlying Java objects or change how the standard relationships are read.
@@ -531,6 +537,34 @@ public class AgEntityOverlay<T> {
      */
     public <V> AgEntityOverlay<T> toMany(String name, Class<V> targetType, boolean readable, boolean writable, Function<T, List<V>> reader) {
         relationships.put(name, new DefaultRelationshipOverlay(name, type, targetType, true, readable, writable, resolverForListReader(reader)));
+        return this;
+    }
+
+    /**
+     * Adds or replaces a to-one conditional relationship overlay.
+     * The provided qualifier is used to prepare backend-specific query to fetch related data.
+     *
+     * @since 5.0
+     */
+    public <V> AgEntityOverlay<T> toOne(String name, Class<V> targetType, String underlyingRelationshipName,
+                                        Exp qualifier, RelatedDataResolverFactory resolverFactory) {
+        RelatedDataResolver<?> resolver = resolverFactory.resolver(type, name);
+        relationships.put(name, new DefaultConditionalRelationshipOverlay(name, type, targetType, false, null, null,
+                resolver, underlyingRelationshipName, qualifier));
+        return this;
+    }
+
+    /**
+     * Adds or replaces a to-many conditional relationship overlay.
+     * The provided qualifier is used to prepare backend-specific query to fetch related data.
+     *
+     * @since 5.0
+     */
+    public <V> AgEntityOverlay<T> toMany(String name, Class<V> targetType, String underlyingRelationshipName,
+                                         Exp qualifier, RelatedDataResolverFactory resolverFactory) {
+        RelatedDataResolver<?> resolver = resolverFactory.resolver(type, name);
+        relationships.put(name, new DefaultConditionalRelationshipOverlay(name, type, targetType, true, null, null,
+                resolver, underlyingRelationshipName, qualifier));
         return this;
     }
 

@@ -10,6 +10,7 @@ import io.agrest.ToOneResourceEntity;
 import io.agrest.access.PathChecker;
 import io.agrest.meta.AgEntity;
 import io.agrest.meta.AgRelationship;
+import io.agrest.meta.ConditionalRelationshipOverlay;
 import io.agrest.runtime.meta.RequestSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +82,11 @@ public class ResourceEntityTreeBuilder {
             }
         }
 
-        if (remainingDepth == 0 && entity.hasRelationship(property)) {
+        // Check if this is an overlay relationship first
+        boolean isOverlayRelationship = isOverlayRelationship(entity, property);
+        boolean hasRelationship = entity.hasRelationship(property) || isOverlayRelationship;
+        
+        if (remainingDepth == 0 && hasRelationship) {
 
             if (quietTruncateLongPaths) {
                 LOGGER.info(
@@ -98,7 +103,7 @@ public class ResourceEntityTreeBuilder {
             }
         }
 
-        if (entity.ensureRelationship(property)) {
+        if (entity.ensureRelationship(property) || isOverlayRelationship) {
             String childPath = dot > 0 ? path.substring(dot + 1) : null;
             return inflateChild(entity, property, childPath, remainingDepth);
         }
@@ -130,6 +135,10 @@ public class ResourceEntityTreeBuilder {
                 : new ToOneResourceEntity<>(target, parent, incoming);
     }
 
+    private boolean isOverlayRelationship(ResourceEntity<?> entity, String relationshipName) {
+        return ConditionalRelationshipOverlay.resolveOverlay(schema, entity.getAgEntity(), relationshipName) != null;
+    }
+
     // This could have been an AgEntity method, but per notes above, we should not really be doing it this way.
     // So adding public API to search for relationship in hierarchy is not desirable
     private AgRelationship findFirstRelationship(ResourceEntity<?> entity, String relationshipName) {
@@ -139,6 +148,13 @@ public class ResourceEntityTreeBuilder {
             if (r != null) {
                 return r;
             }
+        }
+
+        // Check if this is an overlay relationship - resolve to underlying relationship
+        AgEntity<?> agEntity = entity.getAgEntity();
+        ConditionalRelationshipOverlay overlay = ConditionalRelationshipOverlay.resolveOverlay(schema, agEntity, relationshipName);
+        if (overlay != null) {
+            return agEntity.getRelationship(overlay.getUnderlyingRelationshipName());
         }
 
         throw AgException.badRequest("No relationship named '%s' in '%s'", relationshipName, entity.getName());

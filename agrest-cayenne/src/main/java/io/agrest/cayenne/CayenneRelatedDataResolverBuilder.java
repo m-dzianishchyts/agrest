@@ -58,9 +58,8 @@ class CayenneRelatedDataResolverBuilder {
                     + "' can't be resolved with a Cayenne resolver");
         }
 
-        if (entity.getRelationship(relationshipName) == null) {
-            throw new IllegalStateException("Relationship '" + entity.getName() + "." + relationshipName
-                    + "' is not mapped in Cayenne and can't be resolved with a Cayenne resolver");
-        }
+        // We don't check if the relationship exists in the Cayenne model here, because
+        // enhanced overlays use virtual relationship names that don't exist in Cayenne.
+        // The actual underlying relationship will be validated during query assembly.
     }
 }
